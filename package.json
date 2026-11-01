@@ -1,10 +1,11 @@
+
 {
   "name": "anarchia-afk-bot",
   "version": "1.0.0",
-  "description": "Minecraft bot project",
-  "main": "bot.js",
+  "description": "OneBlock Controller",
+  "main": "server.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "mineflayer": "^4.20.1",
