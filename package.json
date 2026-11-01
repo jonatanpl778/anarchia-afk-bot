@@ -1,0 +1,13 @@
+{
+  "name": "anarchia-afk-bot",
+  "version": "1.0.0",
+  "description": "Minecraft bot project",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.20.1",
+    "dotenv": "^16.4.5"
+  }
+}
