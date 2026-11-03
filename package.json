@@ -4,7 +4,7 @@
   "description": "OneBlock Controller",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node -e \"require(require('path').join(require('path').dirname(process.env.npm_package_json), 'server.js'))\""
   },
   "dependencies": {
     "dotenv": "^16.4.5",
