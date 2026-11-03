@@ -1,14 +1,15 @@
-
 {
   "name": "anarchia-afk-bot",
   "version": "1.0.0",
   "description": "OneBlock Controller",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node -e \"require(require('path').join(require('path').dirname(process.env.npm_package_json), 'server.js'))\""
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "mineflayer": "^4.20.1",
-    "dotenv": "^16.4.5"
+    "prismarine-viewer": "^1.33.0",
+    "socket.io": "^4.8.1"
   }
 }

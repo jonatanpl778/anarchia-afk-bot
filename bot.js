@@ -7,6 +7,8 @@ const SERVER_PORT = 25565;
 function createBotController(options = {}) {
   const onLog = typeof options.onLog === 'function' ? options.onLog : () => {};
   const onStateChange = typeof options.onStateChange === 'function' ? options.onStateChange : () => {};
+  const onSpawn = typeof options.onSpawn === 'function' ? options.onSpawn : () => {};
+  const onEnd = typeof options.onEnd === 'function' ? options.onEnd : () => {};
 
   let bot = null;
   let state = 'offline';
@@ -32,6 +34,14 @@ function createBotController(options = {}) {
 
   function getStatus() {
     return { state, online: state === 'online' };
+  }
+
+  function notifyEnd(instance) {
+    try {
+      onEnd(instance);
+    } catch (error) {
+      log(`Błąd zamykania podglądu: ${error.message || error}`);
+    }
   }
 
   function start() {
@@ -76,6 +86,11 @@ function createBotController(options = {}) {
       if (bot !== instance) return;
       log('Bot połączył się z serwerem.');
       setState('online', 'Bot połączył się z serwerem.');
+      try {
+        onSpawn(instance);
+      } catch (error) {
+        log(`Nie udało się uruchomić podglądu: ${error.message || error}`);
+      }
 
       const loginTimer = setTimeout(() => {
         if (bot !== instance || state === 'stopping' || !process.env.BOT_PASSWORD) return;
@@ -123,6 +138,7 @@ function createBotController(options = {}) {
     instance.once('end', reason => {
       const detail = reason ? String(reason) : '';
       log(`Połączenie bota zakończone${detail ? `: ${detail}` : '.'}`);
+      notifyEnd(instance);
       if (bot !== instance) return;
       bot = null;
       loggedIn = false;
@@ -157,6 +173,7 @@ function createBotController(options = {}) {
         if (settled) return;
         settled = true;
         clearTimeout(timeout);
+        notifyEnd(instance);
         if (bot === instance) {
           bot = null;
           loggedIn = false;
