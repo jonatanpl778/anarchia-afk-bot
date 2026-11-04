@@ -7,6 +7,7 @@
     "start": "node -e \"require(require('path').join(require('path').dirname(process.env.npm_package_json), 'server.js'))\""
   },
   "dependencies": {
+    "canvas": "^3.2.0",
     "dotenv": "^16.4.5",
     "mineflayer": "^4.20.1",
     "prismarine-viewer": "^1.33.0",
