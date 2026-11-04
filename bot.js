@@ -81,7 +81,7 @@ function createBotController(options = {}) {
       log(`Błąd tworzenia bota: ${message}`);
       return Promise.resolve({ ok: false, message: 'Nie udało się utworzyć instancji bota.' });
     }
-
+let loginSent = false;
     instance.once('spawn', () => {
       if (bot !== instance) return;
       log('Bot połączył się z serwerem.');
@@ -92,35 +92,48 @@ function createBotController(options = {}) {
         log(`Nie udało się uruchomić podglądu: ${error.message || error}`);
       }
 
-      const loginTimer = setTimeout(() => {
-        if (bot !== instance || state === 'stopping' || !process.env.BOT_PASSWORD) return;
-        try {
-          instance.chat('/l ' + process.env.BOT_PASSWORD);
-          log('Wysłano komendę logowania do serwera.');
-        } catch (error) {
-          log(`Nie udało się wysłać komendy logowania: ${error.message || error}`);
-        }
-      }, 3000);
-      if (typeof loginTimer.unref === 'function') loginTimer.unref();
-    });
+      instance.on('message', message => {
+  const text = message.toString();
+  const lower = text.toLowerCase();
 
-    instance.on('message', message => {
-      const text = message.toString();
-      if (text) log(text);
+  if (text) log(text);
 
-      if (!loggedIn && text.toLowerCase().includes('zalogowano')) {
-        loggedIn = true;
-        const islandTimer = setTimeout(() => {
-          if (bot !== instance || state === 'stopping') return;
-          try {
-            instance.chat('/is');
-          } catch (error) {
-            log(`Nie udało się wysłać komendy /is: ${error.message || error}`);
-          }
-        }, 2000);
-        if (typeof islandTimer.unref === 'function') islandTimer.unref();
+  if (
+    !loginSent &&
+    !loggedIn &&
+    process.env.BOT_PASSWORD &&
+    (
+      lower.includes('/login') ||
+      lower.includes('/l ') ||
+      lower.includes('zaloguj') ||
+      lower.includes('hasło') ||
+      lower.includes('password')
+    )
+  ) {
+    loginSent = true;
+
+    setTimeout(() => {
+      if (bot !== instance || state === 'stopping') return;
+
+      instance.chat('/l ' + process.env.BOT_PASSWORD);
+      log('Wysłano komendę logowania po wykryciu komunikatu serwera.');
+    }, 1500);
+  }
+
+  if (!loggedIn && lower.includes('zalogowano')) {
+    loggedIn = true;
+    const islandTimer = setTimeout(() => {
+      if (bot !== instance || state === 'stopping') return;
+      try {
+        instance.chat('/is');
+      } catch (error) {
+        log(`Nie udało się wysłać komendy /is: ${error.message || error}`);
       }
-    });
+    }, 2000);
+
+    if (typeof islandTimer.unref === 'function') islandTimer.unref();
+  }
+});
 
     instance.on('kicked', reason => {
       const detail = typeof reason === 'string' ? reason : JSON.stringify(reason);
