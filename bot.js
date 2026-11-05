@@ -122,51 +122,59 @@ function createBotController(options = {}) {
       return Promise.resolve({ ok: false, message });
     }
 
-    // Nasłuchiwanie komunikatów od samego początku.
-    instance.on('message', message => {
+    // Odbieranie czytelnego tekstu z serwera (bez surowego JSON-a).
+    instance.on('messagestr', message => {
       if (bot !== instance) return;
 
-      const text = message.toString();
+      const text = String(message || '').trim();
+      if (!text) return;
+
       const lower = text.toLowerCase();
+      log(`SERWER: ${text}`);
 
-      if (text.trim()) log(`SERWER: ${text}`);
-
+      // Rozpoznawanie prośby o zalogowanie na serwerze.
       const loginPrompt =
-        /\/login\b|\/l\b|zaloguj się|zaloguj sie|wpisz hasło|wpisz haslo|podaj hasło|podaj haslo|enter password|please login|please log in|password:/i.test(lower);
+        /\\/login\\b|\\/l\\b|zaloguj(?: się| sie)?|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(lower);
 
       if (loginPrompt && !loginSent && !loggedIn) {
         if (!process.env.BOT_PASSWORD) {
-          log('Serwer wymaga logowania, ale brakuje BOT_PASSWORD.');
+          const message = 'Serwer wymaga logowania, ale brakuje BOT_PASSWORD.';
+          log(message);
           setState('error', 'Brak hasła BOT_PASSWORD.');
           return;
         }
 
         loginSent = true;
-        log('Wykryto prośbę o logowanie.');
+        log('Wykryto prośbę o logowanie. Wysyłanie komendy za 1,5 sekundy...');
 
         loginTimer = setTimeout(() => {
           if (
             bot !== instance ||
             state === 'stopping' ||
+            loggedIn ||
             !process.env.BOT_PASSWORD
           ) return;
 
           try {
             instance.chat('/l ' + process.env.BOT_PASSWORD);
-            log('Wysłano komendę logowania.');
+            log('Wysłano komendę logowania (/l).');
           } catch (error) {
+            loginSent = false;
             log(`Błąd wysyłania logowania: ${error.message}`);
             setState('error', 'Nie udało się wysłać logowania.');
           }
         }, 1500);
       }
 
+      // Potwierdzenie udanego logowania — obsługuje typowe polskie i angielskie komunikaty.
       const loginConfirmation =
-        /zalogowano|zostałeś zalogowany|zostales zalogowany|pomyślnie zalogowano|pomyslnie zalogowano|logged in|successfully logged|login successful/i.test(lower);
+        /zalogowano|zostałeś zalogowany|zostales zalogowany|zostałaś zalogowana|zostalas zalogowana|pomyślnie zalogowano|pomyslnie zalogowano|logowanie zakończone|logowanie zakonczone|logged in|successfully logged in|login successful|already logged in/i.test(lower);
 
       if (loginConfirmation && !loggedIn) {
         loggedIn = true;
-        log('Wykryto potwierdzenie logowania.');
+        clearTimeout(loginTimer);
+        loginTimer = null;
+        log('Serwer potwierdził zalogowanie.');
 
         if (spawned) {
           setState('online', 'Bot jest połączony i zalogowany.');
