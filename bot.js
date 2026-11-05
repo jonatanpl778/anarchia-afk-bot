@@ -134,7 +134,7 @@ function createBotController(options = {}) {
 
       // Rozpoznawanie prośby o zalogowanie na serwerze.
       const loginPrompt =
-        /\\/login\\b|\\/l\\b|zaloguj(?: się| sie)?|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(lower);
+        /\/login\b|\/l\b|zaloguj(?: się| sie)?|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(lower);
 
       if (loginPrompt && !loginSent && !loggedIn) {
         if (!process.env.BOT_PASSWORD) {
