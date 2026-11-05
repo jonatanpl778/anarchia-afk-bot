@@ -111,10 +111,23 @@ function createBotController(options = {}) {
       });
 
       bot = instance;
-   instance.on('resourcePack', (url, hash) => {
-  log('SERWER ZAŻĄDAŁ PAKIETU ZASOBÓW.');
-  log(`Adres pakietu: ${url}`);
-});
+      instance.on('resourcePack', (...details) => {
+        if (bot !== instance) return;
+
+        log('Serwer wysłał żądanie paczki zasobów.');
+
+        try {
+          if (typeof instance.acceptResourcePack !== 'function') {
+            log('Ta wersja Mineflayer nie udostępnia acceptResourcePack().');
+            return;
+          }
+
+          instance.acceptResourcePack();
+          log('Wysłano potwierdzenie akceptacji paczki zasobów.');
+        } catch (error) {
+          log(`Nie udało się zaakceptować paczki zasobów: ${error.message || error}`);
+        }
+      });
     } catch (error) {
       const message = error.message || String(error);
       setState('error', message);
