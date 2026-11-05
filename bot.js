@@ -111,6 +111,10 @@ function createBotController(options = {}) {
       });
 
       bot = instance;
+   instance.on('resourcePack', (url, hash) => {
+  log('SERWER ZAŻĄDAŁ PAKIETU ZASOBÓW.');
+  log(`Adres pakietu: ${url}`);
+});
     } catch (error) {
       const message = error.message || String(error);
       setState('error', message);
