@@ -205,6 +205,45 @@ function createBotController(options = {}) {
       return Promise.resolve({ ok: false, message });
     }
 
+    // Awaryjna obsługa komunikatów komponentowych. Niektóre serwery
+    // wysyłają prompt logowania jako chat component zamiast messagestr.
+    instance.on('message', component => {
+      if (bot !== instance || loginSent || loggedIn || state === 'stopping') return;
+
+      const text = String(component?.toString?.() || component || '').trim();
+      if (!text) return;
+
+      const loginPrompt =
+        /\\/login\\b|\\/l\\b|zaloguj(?: się| sie)?|komendą\\s+\\/login|komenda\\s+\\/login|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(text);
+
+      if (!loginPrompt) return;
+
+      log('Wykryto prośbę o logowanie (zdarzenie message).');
+
+      if (!process.env.BOT_PASSWORD) {
+        const message = 'Serwer wymaga logowania, ale brakuje BOT_PASSWORD.';
+        log(message);
+        setState('error', 'Brak hasła BOT_PASSWORD.');
+        return;
+      }
+
+      loginSent = true;
+      log('Wysyłanie komendy logowania za 1,5 sekundy...');
+
+      loginTimer = setTimeout(() => {
+        if (bot !== instance || state === 'stopping' || loggedIn) return;
+
+        try {
+          instance.chat('/login ' + process.env.BOT_PASSWORD);
+          log('Wysłano komendę logowania (/login).');
+        } catch (error) {
+          loginSent = false;
+          log(`Błąd wysyłania logowania: ${error.message || error}`);
+          setState('error', 'Nie udało się wysłać logowania.');
+        }
+      }, 1500);
+    });
+
     // Odbieranie czytelnego tekstu z serwera (bez surowego JSON-a).
     instance.on('messagestr', message => {
       if (bot !== instance) return;
