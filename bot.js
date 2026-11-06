@@ -8,6 +8,7 @@ function createBotController(options = {}) {
   const onLog = options.onLog || (() => {});
   const onStateChange = options.onStateChange || (() => {});
   const onSpawn = options.onSpawn || (() => {});
+  const onVerification = options.onVerification || (() => {});
   const onEnd = options.onEnd || (() => {});
 
   let bot = null;
@@ -16,6 +17,7 @@ function createBotController(options = {}) {
   let spawned = false;
   let loginSent = false;
   let islandSent = false;
+  let verificationRequired = false;
   let stopPromise = null;
   let loginTimer = null;
   let islandTimer = null;
@@ -38,7 +40,7 @@ function createBotController(options = {}) {
   }
 
   function getStatus() {
-    return { state, online: state === 'online' };
+    return { state, online: state === 'online', verificationRequired };
   }
 
   function clearTimers() {
@@ -95,6 +97,7 @@ function createBotController(options = {}) {
     spawned = false;
     loginSent = false;
     islandSent = false;
+    verificationRequired = false;
 
     setState('starting', 'Łączenie z serwerem...');
     log(`Łączenie z ${SERVER_HOST}:${SERVER_PORT}...`);
@@ -254,6 +257,18 @@ function createBotController(options = {}) {
       const lower = text.toLowerCase();
       log(`SERWER: ${text}`);
 
+      // Wykrywamy prośbę o ręczną weryfikację i pokazujemy ją w panelu.
+      // Nie wykonujemy za użytkownika żadnych ruchów ani odpowiedzi.
+      if (!verificationRequired && /weryfikacja pozycji|verification position/i.test(text)) {
+        verificationRequired = true;
+        log('Wykryto weryfikację pozycji — wymagane jest ręczne działanie użytkownika.');
+        try {
+          onVerification(text);
+        } catch (error) {
+          log(`Błąd powiadomienia o weryfikacji: ${error.message || error}`);
+        }
+      }
+
       // Rozpoznawanie prośby o zalogowanie na serwerze.
       const loginPrompt =
         /\/login\b|\/l\b|zaloguj(?: się| sie)?|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(lower);
@@ -357,6 +372,7 @@ function createBotController(options = {}) {
       bot = null;
       loggedIn = false;
       spawned = false;
+      verificationRequired = false;
 
       if (state === 'stopping') {
         setState('offline', 'Bot został rozłączony.');
