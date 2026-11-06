@@ -111,21 +111,91 @@ function createBotController(options = {}) {
       });
 
       bot = instance;
-      instance.on('resourcePack', (...details) => {
+      // Anarchia wysyła paczkę przez surowy pakiet protokołu.
+      // Nie używamy acceptResourcePack(), bo w części wersji Mineflayer
+      // odpowiedź może zawierać nieprawidłowe UUID paczki.
+      const sendPackStatus = (packet, modern) => {
         if (bot !== instance) return;
 
-        log('Serwer wysłał żądanie paczki zasobów.');
-
         try {
-          if (typeof instance.acceptResourcePack !== 'function') {
-            log('Ta wersja Mineflayer nie udostępnia acceptResourcePack().');
-            return;
-          }
+          if (modern) {
+            const uuid = typeof packet?.uuid === 'string'
+              ? packet.uuid
+              : (packet?.uuid?.toString?.() || '');
 
-          instance.acceptResourcePack();
-          log('Wysłano potwierdzenie akceptacji paczki zasobów.');
+            if (!uuid) {
+              log('Żądanie paczki nie zawiera poprawnego UUID.');
+              return;
+            }
+
+            log(`Serwer wysłał paczkę zasobów (UUID: ${uuid}).`);
+            instance._client.write('resource_pack_receive', {
+              uuid,
+              result: 3
+            });
+            log('Wysłano odpowiedź ACCEPTED (3) dla paczki zasobów.');
+
+            setTimeout(() => {
+              if (bot !== instance) return;
+              try {
+                instance._client.write('resource_pack_receive', {
+                  uuid,
+                  result: 0
+                });
+                log('Wysłano odpowiedź SUCCESSFULLY_LOADED (0) dla paczki zasobów.');
+              } catch (error) {
+                log(`Błąd potwierdzenia załadowania paczki: ${error.message || error}`);
+              }
+            }, 1000);
+          } else {
+            const hash = packet?.hash;
+            if (typeof hash !== 'string') {
+              log('Starsze żądanie paczki nie zawiera poprawnego hash.');
+              return;
+            }
+
+            log('Serwer wysłał starsze żądanie paczki zasobów.');
+            instance._client.write('resource_pack_receive', {
+              hash,
+              result: 3
+            });
+            log('Wysłano odpowiedź ACCEPTED (3) dla starszej paczki.');
+
+            setTimeout(() => {
+              if (bot !== instance) return;
+              try {
+                instance._client.write('resource_pack_receive', {
+                  hash,
+                  result: 0
+                });
+                log('Wysłano odpowiedź SUCCESSFULLY_LOADED (0) dla starszej paczki.');
+              } catch (error) {
+                log(`Błąd potwierdzenia starszej paczki: ${error.message || error}`);
+              }
+            }, 1000);
+          }
         } catch (error) {
-          log(`Nie udało się zaakceptować paczki zasobów: ${error.message || error}`);
+          log(`Nie udało się odpowiedzieć na żądanie paczki: ${error.message || error}`);
+        }
+      };
+
+      instance._client.on('add_resource_pack', packet => {
+        sendPackStatus(packet, true);
+      });
+
+      instance._client.on('resource_pack_send', packet => {
+        sendPackStatus(packet, false);
+      });
+
+      // Nowsze serwery mogą wymagać potwierdzenia listy znanych paczek.
+      instance._client.on('select_known_packs', packet => {
+        if (bot !== instance) return;
+        try {
+          const packs = Array.isArray(packet?.packs) ? packet.packs : [];
+          instance._client.write('select_known_packs', { packs });
+          log(`Potwierdzono listę znanych paczek (${packs.length}).`);
+        } catch (error) {
+          log(`Błąd potwierdzania znanych paczek: ${error.message || error}`);
         }
       });
     } catch (error) {
