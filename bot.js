@@ -214,7 +214,7 @@ function createBotController(options = {}) {
       if (!text) return;
 
       const loginPrompt =
-        /\\/login\\b|\\/l\\b|zaloguj(?: się| sie)?|komendą\\s+\\/login|komenda\\s+\\/login|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(text);
+        /\/login\b|\/l\b|zaloguj(?: się| sie)?|komendą\s+\/login|komenda\s+\/login|wpisz (?:swoje )?hasło|wpisz (?:swoje )?haslo|podaj (?:swoje )?hasło|podaj (?:swoje )?haslo|enter password|please log ?in|password:/i.test(text);
 
       if (!loginPrompt) return;
 
