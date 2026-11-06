@@ -116,6 +116,10 @@ const botController = createBotController({
     if (message) statusMessage = message;
   },
   onSpawn: attachViewerToBot,
+  onVerification: message => {
+    statusMessage = 'Wykryto weryfikację pozycji. Wymagane jest ręczne działanie użytkownika.';
+    appendLog(`WERYFIKACJA: ${message}`);
+  },
   onEnd: closeViewerForBot
 });
 
@@ -213,7 +217,8 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, {
         message: statusMessage,
         state: botStatus.state,
-        viewer: botStatus.online && viewerBot ? 'active' : 'inactive'
+        viewer: botStatus.online && viewerBot ? 'active' : 'inactive',
+        verificationRequired: botStatus.verificationRequired
       });
     }
 
@@ -325,6 +330,7 @@ const html = `<!DOCTYPE html>
     .layout { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(280px,.7fr); gap:14px; margin-top:14px; }
     .card { min-width:0; padding:12px; background:var(--panel); border-radius:12px; }
     #viewer-frame { display:none; width:100%; height:min(62vh,600px); min-height:300px; border:0; border-radius:8px; background:#000; }
+    #verification-alert { display:none; margin:0 0 10px; padding:12px; border:1px solid #d5a43b; border-radius:8px; background:#493a1d; color:#ffe4a3; font-weight:bold; }
     #viewer-placeholder { display:flex; min-height:300px; height:min(62vh,600px); align-items:center; justify-content:center; padding:20px; border-radius:8px; background:var(--dark); color:#dfeedd; text-align:center; }
     #status { margin:0 0 12px; padding:16px; background:var(--panel); border-radius:10px; white-space:pre-wrap; }
     #console { min-height:160px; max-height:260px; overflow:auto; padding:12px; background:var(--dark); border:1px solid var(--border); border-radius:10px; color:#dfeedd; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.5 Consolas,monospace; }
@@ -349,6 +355,7 @@ const html = `<!DOCTYPE html>
     </div>
     <section class="layout">
       <div class="card">
+        <div id="verification-alert" role="alert">⚠️ Wykryto weryfikację pozycji. Wykonaj ją ręcznie w dozwolonym kliencie gry.</div>
         <div id="viewer-placeholder">Zaloguj się i uruchom bota, aby zobaczyć podgląd 3D świata.</div>
         <iframe id="viewer-frame" title="Podgląd 3D Minecrafta" allow="fullscreen" loading="lazy"></iframe>
       </div>
@@ -422,6 +429,7 @@ const html = `<!DOCTYPE html>
         const [status, logData] = await Promise.all([api('/api/status'), api('/api/logs')]);
         document.getElementById('status').textContent = status.message;
         setViewerVisible(status.state === 'online' && status.viewer === 'active');
+        document.getElementById('verification-alert').style.display = status.verificationRequired ? 'block' : 'none';
         const consoleElement = document.getElementById('console');
         const atBottom = consoleElement.scrollTop + consoleElement.clientHeight >= consoleElement.scrollHeight - 10;
         consoleElement.textContent = logData.logs.join('\\n');
